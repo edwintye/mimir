@@ -209,7 +209,7 @@ func TestAggregateBy(t *testing.T) {
 	}
 }
 
-func TestLintExpressions(t *testing.T) {
+func TestLintExpressions_EditExpression(t *testing.T) {
 	tt := []struct {
 		name            string
 		expr            string
@@ -271,7 +271,66 @@ func TestLintExpressions(t *testing.T) {
 			}
 
 			backend := MimirBackend
-			c, m, err := r.LintExpressions(backend)
+			c, m, err := r.LintExpressions(backend, true)
+			rexpr := r.Groups[0].Rules[0].Expr.Value
+
+			require.Equal(t, tc.count, c)
+			require.Equal(t, tc.modified, m)
+			if err == nil {
+				require.Equal(t, tc.expected, rexpr)
+			}
+
+			if tc.err == "" {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.err)
+			}
+		})
+	}
+}
+
+func TestLintExpressions_NoEditExpression(t *testing.T) {
+	tt := []struct {
+		name            string
+		expr            string
+		expected        string
+		err             string
+		count, modified int
+	}{
+		{
+			name:     "it lints simple expressions and makes no edits",
+			expr:     "up                                   != 1",
+			expected: "up                                   != 1",
+			count:    1, modified: 1,
+			err: "",
+		},
+		{
+			name:     "it lints aggregations expressions and makes no edits",
+			expr:     "avg (rate(prometheus_notifications_queue_capacity[5m])) by (cluster, job)",
+			expected: "avg (rate(prometheus_notifications_queue_capacity[5m])) by (cluster, job)",
+			count:    1, modified: 1,
+			err: "",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			r := RuleNamespace{Groups: []rwrulefmt.RuleGroup{
+				{
+					RuleGroup: rulefmt.RuleGroup{
+						Rules: []rulefmt.RuleNode{
+							{
+								Alert: yaml.Node{Value: "AName"},
+								Expr:  yaml.Node{Value: tc.expr},
+							},
+						},
+					},
+				},
+			},
+			}
+
+			backend := MimirBackend
+			c, m, err := r.LintExpressions(backend, false)
 			rexpr := r.Groups[0].Rules[0].Expr.Value
 
 			require.Equal(t, tc.count, c)

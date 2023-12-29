@@ -96,7 +96,8 @@ type RuleCommand struct {
 	aggregationLabelExcludedRuleGroupsList map[string]struct{}
 
 	// Lint Rules Config
-	LintDryRun bool
+	LintDryRun         bool
+	LintEditExpression bool
 
 	// Rules check flags
 	Strict bool
@@ -262,6 +263,7 @@ func (r *RuleCommand) Register(app *kingpin.Application, envVars EnvVarNames, re
 		"Comma separated list of paths to directories containing rules yaml files. Each file in a directory with a .yml or .yaml suffix will be parsed.",
 	).StringVar(&r.RuleFilesPath)
 	lintCmd.Flag("dry-run", "Performs a trial run that doesn't make any changes and (mostly) produces the same outpupt as a real run.").Short('n').BoolVar(&r.LintDryRun)
+	lintCmd.Flag("edit-expression", "Edits the expression to use the output of the PromQL parser.").Short('e').BoolVar(&r.LintEditExpression)
 
 	// Check Command
 	checkCmd.Arg("rule-files", "The rule files to check.").ExistingFilesVar(&r.RuleFilesList)
@@ -717,7 +719,7 @@ func (r *RuleCommand) lint(_ *kingpin.ParseContext) error {
 
 	var count, mod int
 	for _, ruleNamespace := range namespaces {
-		c, m, err := ruleNamespace.LintExpressions(r.Backend)
+		c, m, err := ruleNamespace.LintExpressions(r.Backend, r.LintEditExpression)
 		if err != nil {
 			return err
 		}
@@ -733,7 +735,11 @@ func (r *RuleCommand) lint(_ *kingpin.ParseContext) error {
 		}
 	}
 
-	log.Infof("SUCCESS: %d rules found, %d linted expressions", count, mod)
+	if r.LintEditExpression {
+		log.Infof("SUCCESS: %d rules found, %d linted expressions", count, mod)
+	} else {
+		log.Infof("SUCCESS: %d rules found, %d expressions can be updated", count, mod)
+	}
 
 	return nil
 }
