@@ -264,6 +264,10 @@ func (r *RuleCommand) Register(app *kingpin.Application, envVars EnvVarNames, re
 	).StringVar(&r.RuleFilesPath)
 	lintCmd.Flag("dry-run", "Performs a trial run that doesn't make any changes and (mostly) produces the same outpupt as a real run.").Short('n').BoolVar(&r.LintDryRun)
 	lintCmd.Flag("edit-expression", "Edits the expression to use the output of the PromQL parser.").Short('e').BoolVar(&r.LintEditExpression)
+	lintCmd.Flag(
+		"in-place",
+		"edits the rule file in place",
+	).Short('i').BoolVar(&r.InPlaceEdit)
 
 	// Check Command
 	checkCmd.Arg("rule-files", "The rule files to check.").ExistingFilesVar(&r.RuleFilesList)
@@ -570,7 +574,7 @@ func (r *RuleCommand) syncRules(_ *kingpin.ParseContext) error {
 	if err != nil {
 		return errors.Wrap(err, "sync operation unsuccessful, unable to parse rules files")
 	}
-
+	// (map[string][]rwrulefmt.RuleGroup, error)
 	currentNamespaceMap, err := r.cli.ListRules(context.Background(), "")
 	//TODO: Skipping the 404s here might end up in an unsual scenario.
 	// If we're unable to reach the Mimir API due to a bad URL, we'll assume no rules are
@@ -730,7 +734,7 @@ func (r *RuleCommand) lint(_ *kingpin.ParseContext) error {
 
 	if !r.LintDryRun {
 		// linting will always in-place edit unless is a dry-run.
-		if err := save(namespaces, true); err != nil {
+		if err := save(namespaces, r.InPlaceEdit); err != nil {
 			return err
 		}
 	}
