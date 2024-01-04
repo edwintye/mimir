@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/prometheus/model/rulefmt"
@@ -213,21 +214,52 @@ func TestRuleCommand_checkRules(t *testing.T) {
 }
 
 func TestRuleSaveToFile_NamespaceRuleGroup(t *testing.T) {
-	namespace := "test1"
-	rule1 := []rwrulefmt.RuleGroup{
-		{
-			RuleGroup: rulefmt.RuleGroup{Name: "group-1", Rules: []rulefmt.RuleNode{
-				{
-					Alert: yaml.Node{Value: "AName"},
-					Expr:  yaml.Node{Value: "up != 1"},
+	t.Run("Successful save", func(t *testing.T) {
+		namespace := "ns1"
+		rule1 := []rwrulefmt.RuleGroup{{
+			RuleGroup: rulefmt.RuleGroup{
+				Name: "group-1",
+				Rules: []rulefmt.RuleNode{
+					{
+						Record: yaml.Node{Value: "up", Kind: yaml.ScalarNode},
+						Expr:   yaml.Node{Value: "up==1", Kind: yaml.ScalarNode},
+					},
 				},
 			},
+		}}
+		tempDir := t.TempDir()
+		err := saveNamespaceRuleGroup(namespace, rule1, tempDir)
+		assert.NoError(t, err)
+	})
+	t.Run("Successful save and load", func(t *testing.T) {
+		expect := `
+namespace: ns1
+groups:
+    - name: group-1
+      rules:
+        - alert: up
+          expr: up==1
+`
+		namespace := "ns1"
+		rule1 := []rwrulefmt.RuleGroup{{
+			RuleGroup: rulefmt.RuleGroup{
+				Name: "group-1",
+				Rules: []rulefmt.RuleNode{
+					{
+						Alert: yaml.Node{Value: "up", Kind: yaml.ScalarNode},
+						Expr:  yaml.Node{Value: "up==1", Kind: yaml.ScalarNode},
+					},
+				},
 			},
-		},
-	}
-	tempDir := t.TempDir()
-	err := saveNamespaceRuleGroup(namespace, rule1, tempDir)
-	assert.NoError(t, err)
+		}}
+		tempDir := t.TempDir()
+		err := saveNamespaceRuleGroup(namespace, rule1, tempDir)
+		assert.NoError(t, err)
+		file := filepath.Join(tempDir, fmt.Sprintf("%s.yaml", namespace))
+		content, err := os.ReadFile(file)
+		assert.NoError(t, err)
+		assert.Equal(t, strings.TrimPrefix(expect, "\n"), string(content))
+	})
 }
 
 type ruleCommandClientMock struct {
