@@ -212,6 +212,24 @@ func TestRuleCommand_checkRules(t *testing.T) {
 	}
 }
 
+func TestRuleSaveToFile_NamespaceRuleGroup(t *testing.T) {
+	namespace := "test1"
+	rule1 := []rwrulefmt.RuleGroup{
+		{
+			RuleGroup: rulefmt.RuleGroup{Name: "group-1", Rules: []rulefmt.RuleNode{
+				{
+					Alert: yaml.Node{Value: "AName"},
+					Expr:  yaml.Node{Value: "up != 1"},
+				},
+			},
+			},
+		},
+	}
+	tempDir := t.TempDir()
+	err := saveNamespaceRuleGroup(namespace, rule1, tempDir)
+	assert.NoError(t, err)
+}
+
 type ruleCommandClientMock struct {
 	mock.Mock
 }
