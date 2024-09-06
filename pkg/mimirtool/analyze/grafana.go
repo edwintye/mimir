@@ -28,6 +28,7 @@ var (
 	validMetricName              = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 	variableRangeQueryRangeRegex = regexp.MustCompile(`\[\$?\w+?]`)
 	variableSubqueryRangeRegex   = regexp.MustCompile(`\[\$?\w+:\$?\w+?]`)
+	variableFloatingVariable     = regexp.MustCompile(`[^~[\"](\$[a-zA-Z]+)`)
 	variableReplacer             = strings.NewReplacer(
 		"$__interval", "5m",
 		"$interval", "5m",
@@ -220,6 +221,7 @@ func replaceVariables(query string) string {
 	query = variableReplacer.Replace(query)
 	query = variableRangeQueryRangeRegex.ReplaceAllLiteralString(query, `[5m]`)
 	query = variableSubqueryRangeRegex.ReplaceAllLiteralString(query, `[5m:1m]`)
+	query = variableFloatingVariable.ReplaceAllLiteralString(query, `0`)
 	return query
 }
 
