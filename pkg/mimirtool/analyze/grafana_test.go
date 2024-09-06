@@ -223,4 +223,42 @@ func TestMetricsFromTemplating(t *testing.T) {
 		require.Len(t, metrics, 1)
 		require.Equal(t, map[string]struct{}{"myapp_metric_foo": {}}, metrics)
 	})
+
+	t.Run(`query contains a variable in histogram_fraction`, func(t *testing.T) {
+		metrics := make(map[string]struct{})
+		in := minisdk.Templating{
+			List: []minisdk.TemplateVar{
+				{
+					Name:       "variable",
+					Type:       "query",
+					Datasource: nil,
+					Query:      `histogram_fraction(0, $le, request_duration)`,
+				},
+			},
+		}
+
+		errs := metricsFromTemplating(in, metrics)
+		require.Empty(t, errs)
+		require.Len(t, metrics, 1)
+		require.Equal(t, map[string]struct{}{"request_duration": {}}, metrics)
+	})
+
+	t.Run(`query contains a variables after a comparison operator`, func(t *testing.T) {
+		metrics := make(map[string]struct{})
+		in := minisdk.Templating{
+			List: []minisdk.TemplateVar{
+				{
+					Name:       "variable",
+					Type:       "query",
+					Datasource: nil,
+					Query:      `request_duration > $target`,
+				},
+			},
+		}
+
+		errs := metricsFromTemplating(in, metrics)
+		require.Empty(t, errs)
+		require.Len(t, metrics, 1)
+		require.Equal(t, map[string]struct{}{"request_duration": {}}, metrics)
+	})
 }
