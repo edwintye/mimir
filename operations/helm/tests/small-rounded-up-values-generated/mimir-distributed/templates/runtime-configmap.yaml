@@ -1,0 +1,15 @@
+---
+# Source: mimir-distributed/templates/runtime-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: small-rounded-up-values-mimir-runtime
+  labels:
+    app.kubernetes.io/name: mimir
+    app.kubernetes.io/instance: small-rounded-up-values
+    app.kubernetes.io/managed-by: Helm
+  namespace: "citestns"
+data:
+  runtime.yaml: |
+    
+    {}
