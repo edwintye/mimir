@@ -104,7 +104,16 @@ spec:
             - containerPort: {{ .port }}
               name: client
           args:
+          {{- /* If resource request is set then we calculate the allocated memory = request memory * 0.8 and convert to integer. */}}
+          {{- if ((.resources).requests).memory }}
+            - -m {{ divf (mulf (include "mimir.siToBytes" (dict "value" .resources.requests.memory)) 0.8) 1048576 }}
+            - -m {{ (include "mimir.siToBytes" (dict "value" .resources.requests.memory)) }}
+            - -m {{ .resources.requests.memory }}
+            - -m {{ .resources.requests.memory | trimSuffix "Gi" | float64 }}
+            - -m {{ .resources.requests.memory | trimSuffix "Gi" | float64 | mul 1073741824}}
+          {{- else }}
             - -m {{ .allocatedMemory }}
+          {{- end }}
             - --extended=modern,track_sizes{{ with .extraExtendedOptions }},{{ . }}{{ end }}
             - -I {{ .maxItemMemory }}m
             - -c {{ .connectionLimit }}
